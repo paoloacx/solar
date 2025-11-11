@@ -3,12 +3,12 @@ import crypto from 'crypto';
 // Un User-Agent común para simular un navegador
 const FAKE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36';
 
-// ¡NUEVO! Cabeceras comunes para simular un navegador
+// Cabeceras comunes para simular un navegador
 const COMMON_HEADERS = {
     'Content-Type': 'application/json',
     'User-Agent': FAKE_USER_AGENT,
     'Accept': 'application/json, text/plain, */*',
-    'Referer': 'https://eu.semsportal.com/' // <-- ¡Esta es la nueva clave!
+    'Referer': 'https://eu.semsportal.com/'
 };
 
 // Esta es la función principal que Vercel ejecutará
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         const loginResponse = await fetch('https://eu.semsportal.com/api/v1/Common/CrossLogin', {
             method: 'POST',
             headers: { 
-                ...COMMON_HEADERS, // <-- Usamos las cabeceras comunes
+                ...COMMON_HEADERS,
                 'Token': '{"version":"v2.1.0","client":"ios","language":"en"}'
             },
             body: JSON.stringify({
@@ -34,6 +34,11 @@ export default async function handler(req, res) {
                 pwd: GOODWE_PASS, 
             }),
         });
+        
+        // --- ¡CAMBIO CLAVE! Capturamos las cookies de la respuesta ---
+        const setCookieHeader = loginResponse.headers.get('set-cookie') || '';
+        // Simplificamos la cookie (nos quedamos solo con la parte 'name=value')
+        const sessionCookie = setCookieHeader.split(';')[0]; 
 
         const loginData = await loginResponse.json();
 
@@ -57,15 +62,15 @@ export default async function handler(req, res) {
         const dataResponse = await fetch('https://eu.semsportal.com/api/v1/PowerStation/GetMonitorDetailByPowerstationId', {
             method: 'POST',
             headers: {
-                ...COMMON_HEADERS, // <-- Usamos las cabeceras comunes
-                'Token': dataHeaderToken
+                ...COMMON_HEADERS, 
+                'Token': dataHeaderToken,
+                'Cookie': sessionCookie // <-- ¡ENVIAMOS LA COOKIE DE VUELTA!
             },
             body: JSON.stringify({
                 powerStationId: STATION_ID,
             }),
         });
 
-        // ¡AQUÍ ES DONDE FALLABA! (Línea 65 aprox)
         const stationData = await dataResponse.json();
 
         if (stationData.code !== 0) {
