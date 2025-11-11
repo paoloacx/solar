@@ -8,23 +8,28 @@ async function fetchData() {
     containerEl.style.display = 'none';
 
     try {
-        // IMPORTANTE: Esta URL apuntará a tu "intermediario" en Vercel/Netlify
-        // No es la API de GoodWe directamente.
-        const API_ENDPOINT = '/api/get-data';
+        // --- ¡CAMBIO HECHO AQUÍ! ---
+        // Esta es la URL de tu Google App Script
+        const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzvxVJrmcxxkCmC-6boBjGg-LOQHlpiazDUVLeNjggWnm7ol7NJurzktfWpl_m_Bg0yXQ/exec';
 
         const response = await fetch(API_ENDPOINT);
         
         if (!response.ok) {
-            throw new Error(`Error: ${response.statusText}`);
+            throw new Error(`Error HTTP: ${response.statusText}`);
         }
 
         const data = await response.json();
+        
+        // Si el propio script de Google devolvió un error (ej. mal login)
+        if (data.error) {
+             throw new Error(`Error de la API: ${data.details || data.error}`);
+        }
 
         // Ocultamos "Cargando" y mostramos el contenedor
         loadingEl.style.display = 'none';
         containerEl.style.display = 'block';
 
-        // Limpiamos el contenedor por si acaso
+        // Limpiamos el contenedor
         containerEl.innerHTML = '';
 
         // --- Aquí personalizas los datos que quieres ver ---
