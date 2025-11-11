@@ -1,58 +1,49 @@
-// Usamos 'import' en lugar de 'require' gracias a "type": "module"
+// Importamos 'crypto' (aunque no lo usamos para el login, es bueno tenerlo por si acaso)
 import crypto from 'crypto';
 
 // Esta es la función principal que Vercel ejecutará
 export default async function handler(req, res) {
     
-    // --- 1. CONFIGURACIÓN DE SEGURIDAD (CORS) ---
-    // Permite que tu web le hable a esta API
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-    // Si el navegador solo está "preguntando" si puede conectarse (OPTIONS request)
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    // --- 2. OBTENER SECRETOS ---
-    // Obtenemos las variables seguras que configuraremos en Vercel
+    // --- 1. OBTENER SECRETOS ---
     const { GOODWE_USER, GOODWE_PASS, STATION_ID } = process.env;
 
     if (!GOODWE_USER || !GOODWE_PASS || !STATION_ID) {
         return res.status(500).json({ error: 'Variables de entorno no configuradas en Vercel' });
     }
 
-    // Hasheamos la contraseña a MD5 (requisito de la API de GoodWe)
-    const hashedPassword = crypto.createHash('md5').update(GOODWE_PASS).digest('hex');
-
     try {
-        // --- 3. PASO DE LOGIN: OBTENER EL TOKEN ---
-        const loginResponse = await fetch('https://www.semsportal.com/api/v2/Common/CrossLogin', {
+        // --- 2. PASO DE LOGIN (MÉTODO v1 CORREGIDO) ---
+        
+        // ¡CAMBIO CLAVE! Usamos la API v1 y un token de "cliente" estático, como la app móvil
+        const loginResponse = await fetch('https://www.semsportal.com/api/v1/Common/CrossLogin', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Token': '{"version":"v2.1.0","client":"ios","language":"en"}' // Token de cliente estático
+            },
             body: JSON.stringify({
                 account: GOODWE_USER,
-                pwd: hashedPassword,
+                pwd: GOODWE_PASS, // ¡CAMBIO CLAVE! Enviamos la contraseña en texto plano
             }),
         });
 
         const loginData = await loginResponse.json();
 
-        // Si el login falla...
+        // Si el login falla... (Aquí es donde te daba 401)
         if (loginData.code !== 0 || !loginData.data || !loginData.data.token) {
             console.error('Error de login GoodWe:', loginData);
             return res.status(401).json({ error: 'Fallo de autenticación con GoodWe' });
         }
 
-        const token = loginData.data.token;
+        const token = loginData.data.token; // Este es el token de sesión real
 
-        // --- 4. PASO DE DATOS: OBTENER DATOS DE LA PLANTA ---
+        // --- 3. PASO DE DATOS (Usando el token de sesión) ---
+        // Este endpoint v2 sí funciona con el token de sesión
         const dataResponse = await fetch('https://www.semsportal.com/api/v2/PowerStation/GetMonitorDetailByPowerstationId', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Token': token,
+                'Token': token, // ¡Usamos el token de sesión que acabamos de obtener!
             },
             body: JSON.stringify({
                 powerStationId: STATION_ID,
@@ -66,8 +57,9 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Fallo al obtener datos de la planta' });
         }
 
-        // --- 5. ÉXITO: DEVOLVER LOS DATOS AL FRONTEND ---
-        // Devolvemos solo la parte 'data' que es lo que nos interesa
+        // --- 4. ÉXITO: DEVOLVER LOS DATOS AL FRONTEND ---
+        // ¡IMPORTANTE! Añadimos el permiso CORS aquí para que tu web pueda leer la respuesta
+        res.setHeader('Access-Control-Allow-Origin', '*'); 
         return res.status(200).json(stationData.data);
 
     } catch (error) {
