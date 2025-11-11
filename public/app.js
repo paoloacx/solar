@@ -8,23 +8,29 @@ async function fetchData() {
     containerEl.style.display = 'none';
 
     try {
-        // IMPORTANTE: Esta URL apuntará a tu "intermediario" en Vercel/Netlify
-        // No es la API de GoodWe directamente.
-        const API_ENDPOINT = '/api/get-data';
+        // --- ¡CAMBIO HECHO AQUÍ! ---
+        // Ahora apunta a /api, que Vercel dirigirá a api/index.js
+        const API_ENDPOINT = '/api'; 
 
         const response = await fetch(API_ENDPOINT);
         
         if (!response.ok) {
-            throw new Error(`Error: ${response.statusText}`);
+            // Lanza un error para que sea capturado por el bloque catch
+            throw new Error(`Error HTTP: ${response.statusText}`);
         }
 
         const data = await response.json();
+        
+        // Si el script de la API devolvió un error (ej. mal login)
+        if (data.error) {
+             throw new Error(`Error de la API: ${data.details || data.error}`);
+        }
 
         // Ocultamos "Cargando" y mostramos el contenedor
         loadingEl.style.display = 'none';
         containerEl.style.display = 'block';
 
-        // Limpiamos el contenedor por si acaso
+        // Limpiamos el contenedor
         containerEl.innerHTML = '';
 
         // --- Aquí personalizas los datos que quieres ver ---
@@ -47,7 +53,8 @@ async function fetchData() {
         // ---------------------------------------------------
 
     } catch (error) {
+        // Muestra el error en la web
         loadingEl.innerText = `Error al cargar los datos: ${error.message}`;
-        console.error(error);
+        console.error(error); // También muéstralo en la consola del navegador
     }
 }
