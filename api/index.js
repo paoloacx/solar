@@ -1,5 +1,8 @@
 import crypto from 'crypto';
 
+// Un User-Agent común para simular un navegador y evitar el bloqueo del Firewall
+const FAKE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36';
+
 // Esta es la función principal que Vercel ejecutará
 export default async function handler(req, res) {
     
@@ -12,16 +15,16 @@ export default async function handler(req, res) {
 
     try {
         // --- 2. PASO DE LOGIN (¡Servidor EU v1!) ---
-        // ¡CAMBIO CLAVE! Usamos el endpoint de login v1 del servidor EU
         const loginResponse = await fetch('https://eu.semsportal.com/api/v1/Common/CrossLogin', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Token': '{"version":"v2.1.0","client":"ios","language":"en"}' 
+                'Token': '{"version":"v2.1.0","client":"ios","language":"en"}',
+                'User-Agent': FAKE_USER_AGENT // <-- ¡AÑADIDO PARA EVITAR BLOQUEO!
             },
             body: JSON.stringify({
                 account: GOODWE_USER,
-                pwd: GOODWE_PASS, // ¡Usamos texto plano!
+                pwd: GOODWE_PASS, 
             }),
         });
 
@@ -32,27 +35,24 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Fallo de autenticación con GoodWe (v1 EU)' });
         }
 
-        // Este es nuestro token de sesión v1
         const sessionToken = loginData.data.token; 
 
         // --- 3. PASO DE DATOS (Usando v1 de EU) ---
-        
-        // ¡CAMBIO CLAVE! Usamos el endpoint de datos v1 del servidor EU
         const dataResponse = await fetch('https://eu.semsportal.com/api/v1/PowerStation/GetMonitorDetailByPowerstationId', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // ¡CAMBIO CLAVE! La API v1 espera el token de sesión simple
                 'Token': sessionToken, 
+                'User-Agent': FAKE_USER_AGENT // <-- ¡AÑADIDO PARA EVITAR BLOQUEO!
             },
             body: JSON.stringify({
                 powerStationId: STATION_ID,
             }),
         });
 
+        // ¡AQUÍ ES DONDE FALLABA! (Línea 53 aprox)
         const stationData = await dataResponse.json();
 
-        // ¡Aquí es donde saltaba tu error 100001!
         if (stationData.code !== 0) {
             console.error('Error de datos GoodWe (v1 EU):', stationData); 
             return res.status(500).json({ error: 'Fallo al obtener datos de la planta (v1 EU)' });
