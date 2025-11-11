@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/get-data.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "routes": [
     {
       "src": "/api/(.*)",
