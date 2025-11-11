@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        // --- 2. PASO DE LOGIN (MÉTODO v1) ---
+        // --- 2. PASO DE LOGIN (v1) ---
         const loginResponse = await fetch('https://www.semsportal.com/api/v1/Common/CrossLogin', {
             method: 'POST',
             headers: { 
@@ -34,23 +34,15 @@ export default async function handler(req, res) {
         // Este es nuestro token de sesión
         const sessionToken = loginData.data.token; 
 
-        // --- 3. PASO DE DATOS (Usando el token de sesión) ---
+        // --- 3. PASO DE DATOS (¡¡NUEVO INTENTO USANDO v1!!) ---
         
-        // ¡¡CAMBIO CLAVE AQUÍ!!
-        // Creamos el "Token de Cliente" para la API v2, 
-        // inyectando el token de sesión que acabamos de obtener.
-        const dataHeaderToken = JSON.stringify({
-            version: "v2.1.0",
-            client: "ios",
-            language: "en",
-            token: sessionToken // <-- ¡La pieza que faltaba!
-        });
-
-        const dataResponse = await fetch('https://www.semsportal.com/api/v2/PowerStation/GetMonitorDetailByPowerstationId', {
+        // ¡CAMBIO CLAVE! Usamos el endpoint v1 para los datos.
+        const dataResponse = await fetch('https://www.semsportal.com/api/v1/PowerStation/GetMonitorDetailByPowerstationId', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Token': dataHeaderToken, // <-- ¡Usamos el token de cliente completo!
+                // ¡CAMBIO CLAVE! El endpoint v1 probablemente solo espera el token de sesión.
+                'Token': sessionToken, 
             },
             body: JSON.stringify({
                 powerStationId: STATION_ID,
@@ -61,7 +53,7 @@ export default async function handler(req, res) {
 
         // ¡Aquí es donde saltaba tu error 100001!
         if (stationData.code !== 0) {
-            console.error('Error de datos GoodWe:', stationData);
+            console.error('Error de datos GoodWe:', stationData); // Esto es lo que vemos
             return res.status(500).json({ error: 'Fallo al obtener datos de la planta' });
         }
 
