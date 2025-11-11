@@ -10,7 +10,7 @@ async function fetchData() {
     try {
         // IMPORTANTE: Esta URL apuntará a tu "intermediario" en Vercel/Netlify
         // No es la API de GoodWe directamente.
-        const API_ENDPOINT = 'https://TU-PROYECTO-EN-VERCEL.vercel.app/api/get-data'; // <-- ¡CAMBIARÁS ESTO!
+        const API_ENDPOINT = '/api/get-data';
 
         const response = await fetch(API_ENDPOINT);
         
