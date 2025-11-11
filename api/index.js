@@ -11,12 +11,9 @@ export default async function handler(req, res) {
     }
 
     try {
-        // --- 2. PASO DE LOGIN (¡Servidor EU v2!) ---
+        // --- 2. PASO DE LOGIN (¡Servidor EU v2 con Texto Plano!) ---
 
-        // Hasheamos la contraseña a MD5 (requisito de la API v2)
-        const hashedPassword = crypto.createHash('md5').update(GOODWE_PASS).digest('hex');
-
-        // ¡CAMBIO CLAVE! Usamos el endpoint de login v2 de EU que nos dio el log
+        // ¡CAMBIO CLAVE! Usamos el endpoint de login v2 de EU
         const loginResponse = await fetch('https://eu.semsportal.com/api/Auth/GetTokenV2', {
             method: 'POST',
             headers: { 
@@ -25,7 +22,8 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 account: GOODWE_USER,
-                pwd: hashedPassword, // ¡Usamos la contraseña hasheada!
+                // ¡CAMBIO CLAVE! Enviamos la contraseña en texto plano, no hasheada
+                pwd: GOODWE_PASS, 
             }),
         });
 
