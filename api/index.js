@@ -3,6 +3,14 @@ import crypto from 'crypto';
 // Un User-Agent común para simular un navegador
 const FAKE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36';
 
+// ¡NUEVO! Cabeceras comunes para simular un navegador
+const COMMON_HEADERS = {
+    'Content-Type': 'application/json',
+    'User-Agent': FAKE_USER_AGENT,
+    'Accept': 'application/json, text/plain, */*',
+    'Referer': 'https://eu.semsportal.com/' // <-- ¡Esta es la nueva clave!
+};
+
 // Esta es la función principal que Vercel ejecutará
 export default async function handler(req, res) {
     
@@ -18,9 +26,8 @@ export default async function handler(req, res) {
         const loginResponse = await fetch('https://eu.semsportal.com/api/v1/Common/CrossLogin', {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json',
-                'Token': '{"version":"v2.1.0","client":"ios","language":"en"}',
-                'User-Agent': FAKE_USER_AGENT
+                ...COMMON_HEADERS, // <-- Usamos las cabeceras comunes
+                'Token': '{"version":"v2.1.0","client":"ios","language":"en"}'
             },
             body: JSON.stringify({
                 account: GOODWE_USER,
@@ -39,29 +46,26 @@ export default async function handler(req, res) {
 
         // --- 3. PASO DE DATOS (Usando v1 de EU) ---
         
-        // ¡¡CAMBIO CLAVE AQUÍ!!
-        // Creamos el "Token" para la segunda llamada,
-        // inyectando el token de sesión que acabamos de obtener.
+        // Creamos el "Token" para la segunda llamada
         const dataHeaderToken = JSON.stringify({
             version: "v2.1.0",
             client: "ios",
             language: "en",
-            token: sessionToken // <-- ¡La pieza que faltaba!
+            token: sessionToken
         });
 
         const dataResponse = await fetch('https://eu.semsportal.com/api/v1/PowerStation/GetMonitorDetailByPowerstationId', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Token': dataHeaderToken, // <-- ¡Usamos el token completo!
-                'User-Agent': FAKE_USER_AGENT 
+                ...COMMON_HEADERS, // <-- Usamos las cabeceras comunes
+                'Token': dataHeaderToken
             },
             body: JSON.stringify({
                 powerStationId: STATION_ID,
             }),
         });
 
-        // ¡AQUÍ ES DONDE FALLABA! (Línea 54 aprox)
+        // ¡AQUÍ ES DONDE FALLABA! (Línea 65 aprox)
         const stationData = await dataResponse.json();
 
         if (stationData.code !== 0) {
