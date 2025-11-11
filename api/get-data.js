@@ -1,12 +1,11 @@
-// Importamos 'crypto' para hashear la contraseña (la API de GoodWe lo requiere)
-const crypto = require('crypto');
+// Usamos 'import' en lugar de 'require' gracias a "type": "module"
+import crypto from 'crypto';
 
 // Esta es la función principal que Vercel ejecutará
 export default async function handler(req, res) {
     
     // --- 1. CONFIGURACIÓN DE SEGURIDAD (CORS) ---
-    // Esto permite que tu web (y solo tu web, una vez desplegada) le hable a esta API.
-    // Por ahora usamos '*' (cualquiera) para que funcione en desarrollo.
+    // Permite que tu web le hable a esta API
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
