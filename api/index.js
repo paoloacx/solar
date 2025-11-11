@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-// Un User-Agent común para simular un navegador y evitar el bloqueo del Firewall
+// Un User-Agent común para simular un navegador
 const FAKE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36';
 
 // Esta es la función principal que Vercel ejecutará
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
             headers: { 
                 'Content-Type': 'application/json',
                 'Token': '{"version":"v2.1.0","client":"ios","language":"en"}',
-                'User-Agent': FAKE_USER_AGENT // <-- ¡AÑADIDO PARA EVITAR BLOQUEO!
+                'User-Agent': FAKE_USER_AGENT
             },
             body: JSON.stringify({
                 account: GOODWE_USER,
@@ -38,19 +38,30 @@ export default async function handler(req, res) {
         const sessionToken = loginData.data.token; 
 
         // --- 3. PASO DE DATOS (Usando v1 de EU) ---
+        
+        // ¡¡CAMBIO CLAVE AQUÍ!!
+        // Creamos el "Token" para la segunda llamada,
+        // inyectando el token de sesión que acabamos de obtener.
+        const dataHeaderToken = JSON.stringify({
+            version: "v2.1.0",
+            client: "ios",
+            language: "en",
+            token: sessionToken // <-- ¡La pieza que faltaba!
+        });
+
         const dataResponse = await fetch('https://eu.semsportal.com/api/v1/PowerStation/GetMonitorDetailByPowerstationId', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Token': sessionToken, 
-                'User-Agent': FAKE_USER_AGENT // <-- ¡AÑADIDO PARA EVITAR BLOQUEO!
+                'Token': dataHeaderToken, // <-- ¡Usamos el token completo!
+                'User-Agent': FAKE_USER_AGENT 
             },
             body: JSON.stringify({
                 powerStationId: STATION_ID,
             }),
         });
 
-        // ¡AQUÍ ES DONDE FALLABA! (Línea 53 aprox)
+        // ¡AQUÍ ES DONDE FALLABA! (Línea 54 aprox)
         const stationData = await dataResponse.json();
 
         if (stationData.code !== 0) {
