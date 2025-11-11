@@ -11,8 +11,13 @@ export default async function handler(req, res) {
     }
 
     try {
-        // --- 2. PASO DE LOGIN (v1) ---
-        const loginResponse = await fetch('https://www.semsportal.com/api/v1/Common/CrossLogin', {
+        // --- 2. PASO DE LOGIN (¡Volvemos a v2 con MD5!) ---
+
+        // Hasheamos la contraseña a MD5 (requisito de la API v2)
+        const hashedPassword = crypto.createHash('md5').update(GOODWE_PASS).digest('hex');
+
+        // ¡CAMBIO CLAVE! Usamos el endpoint de login v2
+        const loginResponse = await fetch('https://www.semsportal.com/api/v2/Common/CrossLogin', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -20,29 +25,36 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 account: GOODWE_USER,
-                pwd: GOODWE_PASS, 
+                pwd: hashedPassword, // ¡Usamos la contraseña hasheada!
             }),
         });
 
         const loginData = await loginResponse.json();
 
         if (loginData.code !== 0 || !loginData.data || !loginData.data.token) {
-            console.error('Error de login GoodWe:', loginData);
-            return res.status(401).json({ error: 'Fallo de autenticación con GoodWe' });
+            console.error('Error de login GoodWe (v2):', loginData);
+            return res.status(401).json({ error: 'Fallo de autenticación con GoodWe (v2)' });
         }
 
-        // Este es nuestro token de sesión
+        // Este es nuestro token de sesión v2
         const sessionToken = loginData.data.token; 
 
-        // --- 3. PASO DE DATOS (¡¡NUEVO INTENTO USANDO v1!!) ---
+        // --- 3. PASO DE DATOS (Usando v2) ---
         
-        // ¡CAMBIO CLAVE! Usamos el endpoint v1 para los datos.
-        const dataResponse = await fetch('https://www.semsportal.com/api/v1/PowerStation/GetMonitorDetailByPowerstationId', {
+        // Creamos el "Token de Cliente" para la API v2, 
+        // inyectando el token de sesión v2 que acabamos de obtener.
+        const dataHeaderToken = JSON.stringify({
+            version: "v2.1.0",
+            client: "ios",
+            language: "en",
+            token: sessionToken 
+        });
+
+        const dataResponse = await fetch('https://www.semsportal.com/api/v2/PowerStation/GetMonitorDetailByPowerstationId', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // ¡CAMBIO CLAVE! El endpoint v1 probablemente solo espera el token de sesión.
-                'Token': sessionToken, 
+                'Token': dataHeaderToken, // Usamos el token de cliente completo
             },
             body: JSON.stringify({
                 powerStationId: STATION_ID,
@@ -53,8 +65,8 @@ export default async function handler(req, res) {
 
         // ¡Aquí es donde saltaba tu error 100001!
         if (stationData.code !== 0) {
-            console.error('Error de datos GoodWe:', stationData); // Esto es lo que vemos
-            return res.status(500).json({ error: 'Fallo al obtener datos de la planta' });
+            console.error('Error de datos GoodWe (v2):', stationData); // Esto es lo que vemos
+            return res.status(500).json({ error: 'Fallo al obtener datos de la planta (v2)' });
         }
 
         // --- 4. ÉXITO: DEVOLVER LOS DATOS AL FRONTEND ---
